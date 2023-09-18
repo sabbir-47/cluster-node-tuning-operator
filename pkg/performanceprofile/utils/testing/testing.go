@@ -20,6 +20,10 @@ const (
 	IsolatedCPUs = performancev2.CPUSet("4-5")
 	// ReservedCPUs defines the reserved CPU set used for tests
 	ReservedCPUs = performancev2.CPUSet("0-3")
+	//test
+	ReservedCpuMaxFreq = performancev2.CPUfrequency(2800000)
+	//test
+	ReservedCpuMinFreq = performancev2.CPUfrequency(2500000)
 	// OfflinedCPUs defines the Offline CPU set used for tests
 	OfflinedCPUs     = performancev2.CPUSet("6-7") // SingleNUMAPolicy defines the topologyManager policy used for tests
 	SingleNUMAPolicy = "single-numa-node"
@@ -42,6 +46,8 @@ func NewPerformanceProfile(name string) *performancev2.PerformanceProfile {
 	size := HugePageSize
 	isolatedCPUs := IsolatedCPUs
 	reservedCPUs := ReservedCPUs
+	reservedCpuMaxFreq := ReservedCpuMaxFreq
+	reservedCpuMinFreq := ReservedCpuMinFreq
 	offlineCPUs := OfflinedCPUs
 	numaPolicy := SingleNUMAPolicy
 	additionalKernelArgs := AdditionalKernelArgs
@@ -54,9 +60,11 @@ func NewPerformanceProfile(name string) *performancev2.PerformanceProfile {
 		},
 		Spec: performancev2.PerformanceProfileSpec{
 			CPU: &performancev2.CPU{
-				Isolated: &isolatedCPUs,
-				Reserved: &reservedCPUs,
-				Offlined: &offlineCPUs,
+				Isolated:           &isolatedCPUs,
+				Reserved:           &reservedCPUs,
+				Offlined:           &offlineCPUs,
+				ReservedCpuMaxFreq: &reservedCpuMaxFreq,
+				ReservedCpuMinFreq: &reservedCpuMinFreq,
 			},
 			HugePages: &performancev2.HugePages{
 				DefaultHugePagesSize: &size,

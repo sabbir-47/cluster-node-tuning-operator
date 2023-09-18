@@ -162,4 +162,14 @@ cmdline_pstate=+intel_pstate=passive
 cmdline_pstate=+intel_pstate=disable
 {{end}}
 
+{{ if .ReservedCpuMaxFreq }}
+{{- "[sysfs]" -}}
+{{ range .ReservedCpuList }}
+/sys/devices/system/cpu/cpufreq/policy[{{.}}]/scaling_max_freq={{$.ReservedCpuMaxFreq}}
+{{- if $.ReservedCpuMinFreq }}
+/sys/devices/system/cpu/cpufreq/policy[{{.}}]/scaling_min_freq={{$.ReservedCpuMinFreq}}
+{{- end -}}
+{{ end }}
+{{ end }}
+
 [rtentsk]

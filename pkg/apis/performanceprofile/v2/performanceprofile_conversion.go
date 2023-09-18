@@ -31,6 +31,15 @@ func (curr *PerformanceProfile) ConvertTo(dstRaw conversion.Hub) error {
 		if curr.Spec.CPU.BalanceIsolated != nil {
 			dst.Spec.CPU.BalanceIsolated = pointer.BoolPtr(*curr.Spec.CPU.BalanceIsolated)
 		}
+		//test
+		if curr.Spec.CPU.ReservedCpuMaxFreq != nil {
+			maxCpuFrequency := v1.CPUfrequency(*curr.Spec.CPU.ReservedCpuMaxFreq)
+			dst.Spec.CPU.ReservedCpuMaxFreq = &maxCpuFrequency
+		}
+		if curr.Spec.CPU.ReservedCpuMinFreq != nil {
+			minCpuFrequency := v1.CPUfrequency(*curr.Spec.CPU.ReservedCpuMaxFreq)
+			dst.Spec.CPU.ReservedCpuMinFreq = &minCpuFrequency
+		}
 	}
 
 	if curr.Spec.HugePages != nil {

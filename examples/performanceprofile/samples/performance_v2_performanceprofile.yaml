@@ -14,6 +14,8 @@ spec:
       isolated: "2"
       reserved: "0-1"
       offlined: "3"
+      reservedCpuMaxFreq: 2800000
+      reservedCpuMinFreq: 2600000
   hugepages:
     defaultHugepagesSize: "1G"
     pages:
