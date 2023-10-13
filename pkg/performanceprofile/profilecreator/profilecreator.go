@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/jaypipes/ghw"
@@ -59,6 +60,12 @@ const (
 	noSMTKernelArg = "nosmt"
 	// allCores correspond to the value when all the processorCores need to be added to the generated CPUset
 	allCores = -1
+	//
+	JSONSuffix = ".json"
+	//
+	listCPU = "lscpu"
+	//
+	percentage = 95
 )
 
 var (
@@ -834,4 +841,82 @@ func updateExtendedCPUInfo(extCpuInfo *extendedCPUInfo, used cpuset.CPUSet, disa
 func IsLogicalProcessorUsed(extCPUInfo *extendedCPUInfo, logicalProcessor int) bool {
 	_, ok := extCPUInfo.LogicalProcessorsUsed[logicalProcessor]
 	return ok
+}
+
+//structure to read lscpu.json file
+type Response struct {
+	Cpu []CpuInfo `json:"cpus"`
+}
+type CpuInfo struct {
+	CpuNumber string `json:"cpu"`
+	MaxMhz    string `json:"maxmhz"`
+	MinMhz    string `json:"minmhz"`
+}
+
+// CalculateFrequency calculates maximum and minimum frequency for the first reserved cpu
+func CalculateFrequency(mustGatherDirPath string, rsCPU string) (int, int, error) {
+	var (
+		maxFreq, minFreq int
+		err              error
+		result           Response
+	)
+	nodeList, err := GetNodeList(mustGatherDirPath)
+	if err != nil {
+		return maxFreq, minFreq, fmt.Errorf("failed to optain node list, %v\n", err)
+	}
+	// check with first node, assuming all nodes have same number of cpu
+	if len(nodeList) > 0 {
+		nodeName := nodeList[0].Name
+		pathSuffix := path.Join(Nodes, nodeName, listCPU+JSONSuffix)
+
+		cpuPath, err := getMustGatherFullPaths(mustGatherDirPath, pathSuffix)
+		if err != nil {
+			return maxFreq, minFreq, fmt.Errorf("%v\n", err)
+		}
+
+		src, err := os.Open(cpuPath)
+		if err != nil {
+			return maxFreq, minFreq, fmt.Errorf("failed to open %q: %v", cpuPath, err)
+		}
+		defer src.Close()
+
+		dec := k8syaml.NewYAMLOrJSONDecoder(src, 1024)
+		if err := dec.Decode(&result); err != nil {
+			return maxFreq, minFreq, fmt.Errorf("failed to decode %q: %v", cpuPath, err)
+		}
+	}
+
+	reservedCpu, err := cpuset.Parse(rsCPU)
+	if err != nil {
+		return maxFreq, minFreq, fmt.Errorf("failed to parse reserved cpu list, %v\n", err)
+	}
+
+	// filter frequency from the file
+	for _, val := range result.Cpu {
+		// assuming all cpu returns the same max frequency
+		if val.CpuNumber == strconv.Itoa(reservedCpu.List()[0]) {
+			//CpuFreq governor is not installed or problem during must-gather execution
+			if val.MaxMhz == "" || val.MinMhz == "" {
+				return maxFreq, minFreq, fmt.Errorf("can't obtain cpu frequency for %v, %v\n", val.CpuNumber, err)
+			}
+			maxFreq, err = strconv.Atoi(strings.Split(strings.Trim(val.MaxMhz, "\""), ".")[0])
+			if err != nil {
+				return maxFreq, minFreq, fmt.Errorf("failed to compute maximum cpu frequency for cpu number %v, %v\n", val.CpuNumber, err)
+			}
+			minFreq, err = strconv.Atoi(strings.Split(strings.Trim(val.MinMhz, "\""), ".")[0])
+			if err != nil {
+				return maxFreq, minFreq, fmt.Errorf("failed to compute minimum cpu frequency for cpu number %v, %v\n", val.CpuNumber, err)
+			}
+		}
+	}
+	return maxFreq, setMinFrequency(maxFreq, minFreq), nil
+}
+
+// check minimum frequency
+func setMinFrequency(max, min int) int {
+	computedMin := float32(max) * float32(percentage) / float32(100)
+	if int(computedMin) < min {
+		return min
+	}
+	return int(computedMin)
 }

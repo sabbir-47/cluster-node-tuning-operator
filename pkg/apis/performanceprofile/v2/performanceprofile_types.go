@@ -38,6 +38,9 @@ const PerformanceProfileEnableRpsAnnotation = "performance.openshift.io/enable-r
 type PerformanceProfileSpec struct {
 	// CPU defines a set of CPU related parameters.
 	CPU *CPU `json:"cpu"`
+	// HardwareTuning defines maximum and minuimum cpu frequencies for reserved cpus
+	// +optional
+	HardwareTuning *HardwareTuning `json:"hardwareTuning,omitempty"`
 	// HugePages defines a set of huge pages related parameters.
 	// It is possible to set huge pages with multiple size values at the same time.
 	// For example, hugepages can be set with 1G and 2M, both values will be set on the node by the Performance Profile Controller.
@@ -86,6 +89,7 @@ type PerformanceProfileSpec struct {
 
 // CPUSet defines the set of CPUs(0-3,8-11).
 type CPUSet string
+type CPUfrequency int
 
 // CPU defines a set of CPU related features.
 type CPU struct {
@@ -110,6 +114,14 @@ type CPU struct {
 	// Offline defines a set of CPUs that will be unused and set offline
 	// +optional
 	Offlined *CPUSet `json:"offlined,omitempty"`
+}
+
+// // HardwareTuning defines a set of CPU frequency related features.
+type HardwareTuning struct {
+	// ReservedCpuMinFreq defines a minimum frequency to be set across reserved cpus
+	ReservedCpuMinFreq *CPUfrequency `json:"reservedCpuMinFreq,omitempty"`
+	// ReservedCpuMaxFreq defines a maximum frequency to be set across reserved cpus
+	ReservedCpuMaxFreq *CPUfrequency `json:"reservedCpuMaxFreq,omitempty"`
 }
 
 // HugePageSize defines size of huge pages, can be 2M or 1G.
