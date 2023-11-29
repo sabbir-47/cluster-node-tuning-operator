@@ -32,6 +32,9 @@ const (
 	templateRealTimeHint                    = "RealTimeHint"
 	templateHighPowerConsumption            = "HighPowerConsumption"
 	templatePerPodPowerManagement           = "PerPodPowerManagement"
+	templateReservedCpuMaxFreq              = "ReservedCpuMaxFreq"
+	templateReservedCpuMinFreq              = "ReservedCpuMinFreq"
+	templateReservedCpuList                 = "ReservedCpuList"
 )
 
 func new(name string, profiles []tunedv1.TunedProfile, recommends []tunedv1.TunedRecommend) *tunedv1.Tuned {
@@ -53,13 +56,27 @@ func new(name string, profiles []tunedv1.TunedProfile, recommends []tunedv1.Tune
 
 // NewNodePerformance returns tuned profile for performance sensitive workflows
 func NewNodePerformance(profile *performancev2.PerformanceProfile) (*tunedv1.Tuned, error) {
-	templateArgs := make(map[string]string)
+	//	templateArgs := make(map[string]string)
+	templateArgs := make(map[string]interface{})
 
 	if profile.Spec.CPU.Isolated != nil {
 		templateArgs[templateIsolatedCpus] = string(*profile.Spec.CPU.Isolated)
 		if profile.Spec.CPU.BalanceIsolated != nil && !*profile.Spec.CPU.BalanceIsolated {
 			templateArgs[templateStaticIsolation] = strconv.FormatBool(true)
 		}
+	}
+
+	if profile.Spec.CPU.Reserved != nil && profile.Spec.CPU.ReservedCpuMaxFreq != nil {
+
+		reservedSet, err := cpuset.Parse(string(*profile.Spec.CPU.Reserved))
+		if err != nil {
+			return nil, err
+		}
+
+		reservedCPuList := reservedSet.List()
+		templateArgs[templateReservedCpuList] = reservedCPuList
+		templateArgs[templateReservedCpuMaxFreq] = int(*profile.Spec.CPU.ReservedCpuMaxFreq)
+		templateArgs[templateReservedCpuMinFreq] = int(*profile.Spec.CPU.ReservedCpuMinFreq)
 	}
 
 	if profile.Spec.HugePages != nil {

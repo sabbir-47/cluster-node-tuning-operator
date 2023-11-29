@@ -33,6 +33,16 @@ func (in *CPU) DeepCopyInto(out *CPU) {
 		*out = new(CPUSet)
 		**out = **in
 	}
+	if in.ReservedCpuMaxFreq != nil {
+		in, out := &in.ReservedCpuMaxFreq, &out.ReservedCpuMaxFreq
+		*out = new(CPUfrequency)
+		**out = **in
+	}
+	if in.ReservedCpuMinFreq != nil {
+		in, out := &in.ReservedCpuMinFreq, &out.ReservedCpuMinFreq
+		*out = new(CPUfrequency)
+		**out = **in
+	}
 	return
 }
 

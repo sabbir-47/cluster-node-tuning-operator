@@ -91,6 +91,12 @@ spec:
                     description: Reserved defines a set of CPUs that will not be used
                       for any container workloads initiated by kubelet.
                     type: string
+                  reservedCpuMaxFreq:
+                    description: ReservedCpuMaxFreq defines the maximum cpu frequency for reserved CPUs.
+                    type: integer
+                  reservedCpuMinFreq:
+                    description: ReservedCpuMinFreq defines the maximum cpu frequency for reserved CPUs.
+                    type: integer
                 required:
                 - isolated
                 type: object

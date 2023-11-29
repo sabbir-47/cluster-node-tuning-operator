@@ -78,6 +78,7 @@ type PerformanceProfileSpec struct {
 
 // CPUSet defines the set of CPUs(0-3,8-11).
 type CPUSet string
+type CPUfrequency int
 
 // CPU defines a set of CPU related features.
 type CPU struct {
@@ -102,6 +103,12 @@ type CPU struct {
 	// Offline defines a set of CPUs that will be unused and set offline
 	// +optional
 	Offlined *CPUSet `json:"offlined,omitempty"`
+	//
+	// +optional
+	ReservedCpuMaxFreq *CPUfrequency `json:"reservedCpuMaxFreq,omitempty"`
+	//
+	// +optional
+	ReservedCpuMinFreq *CPUfrequency `json:"reservedCpuMinFreq,omitempty"`
 }
 
 // HugePageSize defines size of huge pages, can be 2M or 1G.
