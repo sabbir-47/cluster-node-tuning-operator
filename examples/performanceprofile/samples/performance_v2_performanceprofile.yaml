@@ -13,7 +13,7 @@ spec:
   cpu:
       isolated: "2"
       reserved: "0-1"
-      offlined: "3"
+      offlined: "3"   
   hugepages:
     defaultHugepagesSize: "1G"
     pages:

@@ -111,6 +111,7 @@ func (r *PerformanceProfile) validateFields() field.ErrorList {
 	allErrs = append(allErrs, r.validateNUMA()...)
 	allErrs = append(allErrs, r.validateNet()...)
 	allErrs = append(allErrs, r.validateWorkloadHints()...)
+	allErrs = append(allErrs, r.validateCpuFrequency()...)
 
 	return allErrs
 }
@@ -342,5 +343,27 @@ func (r *PerformanceProfile) validateWorkloadHints() field.ErrorList {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec.workloadHints.MixedCpus"), r.Spec.WorkloadHints.MixedCpus, "Invalid WorkloadHints configuration: MixedCpus enabled but no shared CPUs were specified"))
 		}
 	}
+	return allErrs
+}
+
+func (r *PerformanceProfile) validateCpuFrequency() field.ErrorList {
+	var allErrs field.ErrorList
+
+	if r.Spec.HardwareTuning == nil {
+		return allErrs
+	}
+
+	if r.Spec.HardwareTuning.IsolatedCpuFreq != nil && r.Spec.HardwareTuning.ReservedCpuFreq != nil {
+		isolatedFreq := *r.Spec.HardwareTuning.IsolatedCpuFreq
+		if isolatedFreq == 0 {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec.hardwareTuning.isolatedCpuFreq"), r.Spec.HardwareTuning.IsolatedCpuFreq, fmt.Sprintf("isolated cpu frequency can not be equal to 0")))
+		}
+
+		reservedFreq := *r.Spec.HardwareTuning.ReservedCpuFreq
+		if reservedFreq == 0 {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec.hardwareTuning.reservedCpuFreq"), r.Spec.HardwareTuning.ReservedCpuFreq, fmt.Sprintf("reserved cpu frequency can not be equal to 0")))
+		}
+	}
+
 	return allErrs
 }

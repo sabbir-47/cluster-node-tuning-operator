@@ -103,6 +103,22 @@ spec:
                   per pod CPUs when using irq-load-balancing.crio.io/cpu-quota.crio.io
                   annotations. Defaults to "false"
                 type: boolean
+              hardwareTuning:
+                description: HardwareTuning defines cpu frequencies for isolated and reserved cpus. 
+                  It is an optional parameter and requires vendor recommendation to find suitable 
+                  frequencies. The intention is to set higher frequencies for reserved cpus where 
+                  platform application is running while setting isolated cpu frequencies to match 
+                  vendor recommendation.
+                properties:
+                  isolatedCpuFreq: 
+                    description: IsolatedCpuFreq defines the maximum cpu frequency for isolated CPUs.
+                    format: int32
+                    type: integer
+                  reservedCpuFreq:
+                    description: ReservedCpuFreq defines the maximum cpu frequency for reserved CPUs.
+                    format: int32
+                    type: integer  
+                type: object    
               hugepages:
                 description: HugePages defines a set of huge pages related parameters.
                   It is possible to set huge pages with multiple size values at the
@@ -552,6 +568,22 @@ spec:
                   per pod CPUs when using irq-load-balancing.crio.io/cpu-quota.crio.io
                   annotations. Defaults to "false"
                 type: boolean
+              hardwareTuning:
+                description: HardwareTuning defines cpu frequencies for isolated and reserved cpus. 
+                  It is an optional parameter and requires vendor recommendation to find suitable 
+                  frequencies. The intention is to set higher frequencies for reserved cpus where 
+                  platform application is running while setting isolated cpu frequencies to match 
+                  vendor recommendation.
+                properties:
+                  isolatedCpuFreq: 
+                    description: IsolatedCpuFreq defines the maximum cpu frequency for isolated CPUs.
+                    format: int32
+                    type: integer
+                  reservedCpuFreq:
+                    description: ReservedCpuFreq defines the maximum cpu frequency for reserved CPUs.
+                    format: int32
+                    type: integer  
+                type: object   
               hugepages:
                 description: HugePages defines a set of huge pages related parameters.
                   It is possible to set huge pages with multiple size values at the

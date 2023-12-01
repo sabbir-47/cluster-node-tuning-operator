@@ -160,8 +160,19 @@ cmdline_additionalArg=+{{.AdditionalArgs}}
 
 {{if .PerPodPowerManagement}}
 cmdline_pstate=+intel_pstate=passive
-{{else if .RealTimeHint}}
-cmdline_pstate=+intel_pstate=disable
+{{else}}
+cmdline_pstate=+intel_pstate=active
 {{end}}
+
+{{ if and .ReservedFreq .IsolatedFreq }}
+{{- "[sysfs]" -}}
+{{ range .IsolatedCpuList }}
+/sys/devices/system/cpu/cpufreq/policy[{{.}}]/scaling_max_freq={{$.IsolatedCpuMaxFreq}}
+{{- end -}}
+{{ range .ReservedCpuList }}
+/sys/devices/system/cpu/cpufreq/policy[{{.}}]/scaling_max_freq={{$.ReservedCpuMaxFreq}}
+{{- end -}}
+{{ end }}
+
 
 [rtentsk]

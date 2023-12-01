@@ -35,6 +35,7 @@ var (
 	cmdlineMultipleHugePages          = "+ default_hugepagesz=1G   hugepagesz=1G hugepages=4 hugepagesz=2M hugepages=128"
 	cmdlinePerPodPowerManagementHint  = "+intel_pstate=passive"
 	cmdlineHighPowerConsumptionPstate = "+intel_pstate=disable"
+	cmdlineDefaultPstate              = "+intel_pstate=active"
 )
 
 var _ = Describe("Tuned", func() {
@@ -162,7 +163,7 @@ var _ = Describe("Tuned", func() {
 					bootLoader, err := tunedData.GetSection("bootloader")
 					Expect(err).ToNot(HaveOccurred())
 					Expect(bootLoader.Key("cmdline_power_performance").String()).To(Equal(cmdlineHighPowerConsumption))
-					Expect(bootLoader.Key("cmdline_pstate").String()).To(Equal(cmdlineHighPowerConsumptionPstate))
+					Expect(bootLoader.Key("cmdline_pstate").String()).To(Equal(cmdlineDefaultPstate))
 				})
 			})
 
@@ -220,7 +221,7 @@ var _ = Describe("Tuned", func() {
 		})
 
 		When("perPodPowerManagement Hint is false realTime Hint true", func() {
-			It("should not contain perPodPowerManagement related parameters but intel_pstate=disable", func() {
+			It("should not contain perPodPowerManagement related parameters but intel_pstate=active", func() {
 				profile.Spec.WorkloadHints.PerPodPowerManagement = pointer.BoolPtr(false)
 				profile.Spec.WorkloadHints.RealTime = pointer.BoolPtr(true)
 				tunedData := getTunedStructuredData(profile)
@@ -230,7 +231,7 @@ var _ = Describe("Tuned", func() {
 				bootLoaderSection, err := tunedData.GetSection("bootloader")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(bootLoaderSection.Key("cmdline_pstate").String()).ToNot(Equal(cmdlinePerPodPowerManagementHint))
-				Expect(bootLoaderSection.Key("cmdline_pstate").String()).To(Equal(cmdlineHighPowerConsumptionPstate))
+				Expect(bootLoaderSection.Key("cmdline_pstate").String()).To(Equal(cmdlineDefaultPstate))
 			})
 		})
 
