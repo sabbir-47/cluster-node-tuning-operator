@@ -33,6 +33,17 @@ func (curr *PerformanceProfile) ConvertTo(dstRaw conversion.Hub) error {
 		}
 	}
 
+	if curr.Spec.HardwareTuning != nil {
+		dst.Spec.HardwareTuning = new(v1.HardwareTuning)
+		if curr.Spec.HardwareTuning.IsolatedCpuFreq != nil {
+			minCpuFrequency := v1.CPUfrequency(*curr.Spec.HardwareTuning.IsolatedCpuFreq)
+			dst.Spec.HardwareTuning.IsolatedCpuFreq = &minCpuFrequency
+		}
+		if curr.Spec.HardwareTuning.ReservedCpuFreq != nil {
+			maxCpuFrequency := v1.CPUfrequency(*curr.Spec.HardwareTuning.ReservedCpuFreq)
+			dst.Spec.HardwareTuning.ReservedCpuFreq = &maxCpuFrequency
+		}
+	}
 	if curr.Spec.HugePages != nil {
 		dst.Spec.HugePages = new(v1.HugePages)
 

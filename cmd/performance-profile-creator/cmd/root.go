@@ -99,6 +99,8 @@ type ProfileData struct {
 	realtimeHint              *bool
 	highPowerConsumptionHint  *bool
 	perPodPowerManagementHint *bool
+	isolatedCpuFreq           int
+	reservedCpuFreq           int
 }
 
 // ClusterData collects the cluster wide information, each mcp points to a list of ghw node handlers
@@ -195,6 +197,8 @@ func NewRootCommand() *cobra.Command {
 	root.PersistentFlags().StringVar(&pcArgs.TMPolicy, "topology-manager-policy", kubeletconfig.RestrictedTopologyManagerPolicy, fmt.Sprintf("Kubelet Topology Manager Policy of the performance profile to be created. [Valid values: %s, %s, %s]", kubeletconfig.SingleNumaNodeTopologyManagerPolicy, kubeletconfig.BestEffortTopologyManagerPolicy, kubeletconfig.RestrictedTopologyManagerPolicy))
 	root.PersistentFlags().StringVar(&pcArgs.Info, "info", infoModeLog, fmt.Sprintf("Show cluster information; requires --must-gather-dir-path, ignore the other arguments. [Valid values: %s]", strings.Join(validInfoModes, ", ")))
 	root.PersistentFlags().BoolVar(pcArgs.PerPodPowerManagement, "per-pod-power-management", false, "Enable Per Pod Power Management")
+	root.PersistentFlags().IntVar(&pcArgs.IsolatedCpuFreq, "isolated-cpu-max-frequency", 0, "Maximum frequency for isolated cpus, follow recommended platforms frequency based on processor")
+	root.PersistentFlags().IntVar(&pcArgs.ReservedCpuFreq, "reserved-cpu-max-frequency", 0, "Maximum frequency for reserved cpus, follow recommended platforms frequency based on processor")
 
 	return root
 }
@@ -402,6 +406,19 @@ func getDataFromFlags(cmd *cobra.Command) (ProfileCreatorArgs, error) {
 		return creatorArgs, fmt.Errorf("failed to parse disable-ht flag: %v", err)
 	}
 
+	isolatedCpuFreq, err := strconv.Atoi(cmd.Flag("isolated-cpu-max-frequency").Value.String())
+	if err != nil {
+		return creatorArgs, fmt.Errorf("failed to parse isolated-cpu-max-frequency flag: %v", err)
+	}
+
+	reservedCpuFreq, err := strconv.Atoi(cmd.Flag("reserved-cpu-max-frequency").Value.String())
+	if err != nil {
+		return creatorArgs, fmt.Errorf("failed to parse reserved-cpu-max-frequency flag: %v", err)
+	}
+
+	if isolatedCpuFreq < 0 || reservedCpuFreq < 0 {
+		return creatorArgs, fmt.Errorf("isolatedCpuFreq and reservedCpuFreq must be non-negative integer")
+	}
 	creatorArgs = ProfileCreatorArgs{
 		MustGatherDirPath:           mustGatherDirPath,
 		ProfileName:                 profileName,
@@ -413,6 +430,8 @@ func getDataFromFlags(cmd *cobra.Command) (ProfileCreatorArgs, error) {
 		RTKernel:                    rtKernelEnabled,
 		PowerConsumptionMode:        powerConsumptionMode,
 		DisableHT:                   htDisabled,
+		IsolatedCpuFreq:             isolatedCpuFreq,
+		ReservedCpuFreq:             reservedCpuFreq,
 	}
 
 	if cmd.Flag("user-level-networking").Changed {
@@ -487,6 +506,7 @@ func getProfileData(args ProfileCreatorArgs, cluster ClusterData) (*ProfileData,
 	}
 	log.Infof("%d reserved CPUs allocated: %v ", reservedCPUs.Size(), reservedCPUs.String())
 	log.Infof("%d isolated CPUs allocated: %v", isolatedCPUs.Size(), isolatedCPUs.String())
+
 	kernelArgs := profilecreator.GetAdditionalKernelArgs(args.DisableHT)
 	profileData := &ProfileData{
 		reservedCPUs:              reservedCPUs.String(),
@@ -501,6 +521,8 @@ func getProfileData(args ProfileCreatorArgs, cluster ClusterData) (*ProfileData,
 		userLevelNetworking:       args.UserLevelNetworking,
 		disableHT:                 args.DisableHT,
 		perPodPowerManagementHint: args.PerPodPowerManagement,
+		isolatedCpuFreq:           args.IsolatedCpuFreq,
+		reservedCpuFreq:           args.ReservedCpuFreq,
 	}
 
 	// setting workload hints
@@ -559,6 +581,8 @@ type ProfileCreatorArgs struct {
 	TMPolicy                    string `json:"topology-manager-policy"`
 	Info                        string `json:"info"`
 	PerPodPowerManagement       *bool  `json:"per-pod-power-management,omitempty"`
+	IsolatedCpuFreq             int    `json:"isolated-cpu-frequency,omitempty"`
+	ReservedCpuFreq             int    `json:"reserved-cpu-frequency,omitempty"`
 }
 
 func createProfile(profileData ProfileData) error {
@@ -624,6 +648,14 @@ func createProfile(profileData ProfileData) error {
 		}
 	}
 
+	if profileData.isolatedCpuFreq > 0 && profileData.reservedCpuFreq > 0 {
+		isolatedCpuFreq := performancev2.CPUfrequency(profileData.isolatedCpuFreq)
+		reservedCpuFreq := performancev2.CPUfrequency(profileData.reservedCpuFreq)
+		profile.Spec.HardwareTuning = &performancev2.HardwareTuning{
+			IsolatedCpuFreq: &isolatedCpuFreq,
+			ReservedCpuFreq: &reservedCpuFreq,
+		}
+	}
 	// write CSV to out dir
 	writer := strings.Builder{}
 	if err := MarshallObject(&profile, &writer); err != nil {
