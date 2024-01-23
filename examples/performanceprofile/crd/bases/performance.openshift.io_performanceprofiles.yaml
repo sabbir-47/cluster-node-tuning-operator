@@ -86,6 +86,17 @@ spec:
                   per pod CPUs when using irq-load-balancing.crio.io/cpu-quota.crio.io
                   annotations. Defaults to "false"
                 type: boolean
+              hardwareTuning:
+                description: HardwareTuning
+                properties:
+                  reservedCpuMinFreq: 
+                    description: ReservedCpuMinFreq defines the maximum cpu frequency for reserved CPUs.
+                    format: int32
+                    type: string
+                  reservedCpuMaxFreq:
+                    description: ReservedCpuMaxFreq defines the maximum cpu frequency for reserved CPUs.
+                    format: int32
+                    type: integer
               hugepages:
                 description: HugePages defines a set of huge pages related parameters.
                   It is possible to set huge pages with multiple size values at the

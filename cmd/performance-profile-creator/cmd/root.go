@@ -99,6 +99,8 @@ type ProfileData struct {
 	realtimeHint              *bool
 	highPowerConsumptionHint  *bool
 	perPodPowerManagementHint *bool
+	reservedCpuMinFreq        int
+	reservedCpuMaxFreq        int
 }
 
 // ClusterData collects the cluster wide information, each mcp points to a list of ghw node handlers
@@ -195,6 +197,7 @@ func NewRootCommand() *cobra.Command {
 	root.PersistentFlags().StringVar(&pcArgs.TMPolicy, "topology-manager-policy", kubeletconfig.RestrictedTopologyManagerPolicy, fmt.Sprintf("Kubelet Topology Manager Policy of the performance profile to be created. [Valid values: %s, %s, %s]", kubeletconfig.SingleNumaNodeTopologyManagerPolicy, kubeletconfig.BestEffortTopologyManagerPolicy, kubeletconfig.RestrictedTopologyManagerPolicy))
 	root.PersistentFlags().StringVar(&pcArgs.Info, "info", infoModeLog, fmt.Sprintf("Show cluster information; requires --must-gather-dir-path, ignore the other arguments. [Valid values: %s]", strings.Join(validInfoModes, ", ")))
 	root.PersistentFlags().BoolVar(pcArgs.PerPodPowerManagement, "per-pod-power-management", false, "Enable Per Pod Power Management")
+	root.PersistentFlags().BoolVar(&pcArgs.BoostFrequency, "boost-frequency", false, "Enable frequency tuning for reserved cpus")
 
 	return root
 }
@@ -402,6 +405,11 @@ func getDataFromFlags(cmd *cobra.Command) (ProfileCreatorArgs, error) {
 		return creatorArgs, fmt.Errorf("failed to parse disable-ht flag: %v", err)
 	}
 
+	boostFrequency, err := strconv.ParseBool(cmd.Flag("boost-frequency").Value.String())
+	if err != nil {
+		return creatorArgs, fmt.Errorf("failed to parse boost-frequency flag: %v", err)
+	}
+
 	creatorArgs = ProfileCreatorArgs{
 		MustGatherDirPath:           mustGatherDirPath,
 		ProfileName:                 profileName,
@@ -413,6 +421,7 @@ func getDataFromFlags(cmd *cobra.Command) (ProfileCreatorArgs, error) {
 		RTKernel:                    rtKernelEnabled,
 		PowerConsumptionMode:        powerConsumptionMode,
 		DisableHT:                   htDisabled,
+		BoostFrequency:              boostFrequency,
 	}
 
 	if cmd.Flag("user-level-networking").Changed {
@@ -487,6 +496,7 @@ func getProfileData(args ProfileCreatorArgs, cluster ClusterData) (*ProfileData,
 	}
 	log.Infof("%d reserved CPUs allocated: %v ", reservedCPUs.Size(), reservedCPUs.String())
 	log.Infof("%d isolated CPUs allocated: %v", isolatedCPUs.Size(), isolatedCPUs.String())
+
 	kernelArgs := profilecreator.GetAdditionalKernelArgs(args.DisableHT)
 	profileData := &ProfileData{
 		reservedCPUs:              reservedCPUs.String(),
@@ -501,6 +511,15 @@ func getProfileData(args ProfileCreatorArgs, cluster ClusterData) (*ProfileData,
 		userLevelNetworking:       args.UserLevelNetworking,
 		disableHT:                 args.DisableHT,
 		perPodPowerManagementHint: args.PerPodPowerManagement,
+	}
+
+	// test: set frequency value
+	if args.BoostFrequency {
+		profileData.reservedCpuMaxFreq, profileData.reservedCpuMinFreq, err = profilecreator.CalculateFrequency(args.MustGatherDirPath, profileData.reservedCPUs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute the maximum and minimum frequencies for reserved CPUs: %v", err)
+		}
+		log.Infof("reserved CPUs max frequency:%v, min frequency:%v", profileData.reservedCpuMaxFreq, profileData.reservedCpuMinFreq)
 	}
 
 	// setting workload hints
@@ -559,6 +578,8 @@ type ProfileCreatorArgs struct {
 	TMPolicy                    string `json:"topology-manager-policy"`
 	Info                        string `json:"info"`
 	PerPodPowerManagement       *bool  `json:"per-pod-power-management,omitempty"`
+	//test
+	BoostFrequency bool `json:"boost-frequency,omitempty"`
 }
 
 func createProfile(profileData ProfileData) error {
@@ -594,7 +615,14 @@ func createProfile(profileData ProfileData) error {
 		offlined := performancev2.CPUSet(profileData.offlinedCPUs)
 		profile.Spec.CPU.Offlined = &offlined
 	}
-
+	if profileData.reservedCpuMaxFreq > 0 && profileData.reservedCpuMinFreq > 0 {
+		minFreq := performancev2.CPUfrequency(profileData.reservedCpuMinFreq)
+		maxFreq := performancev2.CPUfrequency(profileData.reservedCpuMaxFreq)
+		profile.Spec.HardwareTuning = &performancev2.HardwareTuning{
+			ReservedCpuMinFreq: &minFreq,
+			ReservedCpuMaxFreq: &maxFreq,
+		}
+	}
 	if len(profileData.additionalKernelArgs) > 0 {
 		profile.Spec.AdditionalKernelArgs = profileData.additionalKernelArgs
 	}
