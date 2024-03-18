@@ -165,7 +165,7 @@ cmdline_pstate=+intel_pstate=passive
 {{else if .HardwareTuning}}
 cmdline_pstate=+intel_pstate=active
 {{else if .RealTimeHint}}
-cmdline_pstate=+intel_pstate=${f:set_pstate}
+cmdline_pstate=+intel_pstate=${f:intel_recommended_pstate}
 {{end}}
 
 [rtentsk]
